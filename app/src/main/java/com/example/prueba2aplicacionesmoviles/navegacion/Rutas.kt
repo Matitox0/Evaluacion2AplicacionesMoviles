@@ -8,4 +8,5 @@ object Rutas {
     const val HOME = "menu"
 
     const val CARGAR_DOCUMENTO = "cargar_documento"
+    const val MIS_DOCUMENTOS = "mis_documentos"
 }

@@ -71,4 +71,12 @@ class DocumentoRepository(
                 false
             }
         }
+
+    suspend fun eliminar(documento: Documento) = withContext(Dispatchers.IO) {
+        try {
+            val fileUri = Uri.parse(documento.uri)
+            fileUri.path?.let { File(it).delete() }
+        } catch (_: Exception) {}
+        documentoDao.eliminar(documento)
+    }
 }

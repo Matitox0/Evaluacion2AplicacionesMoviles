@@ -22,6 +22,8 @@ import com.example.prueba2aplicacionesmoviles.ui.registro.PantallaRegistro
 import com.example.prueba2aplicacionesmoviles.ui.registro.RegistroViewModel
 import com.example.prueba2aplicacionesmoviles.ui.cargar.CargarDocumentoViewModel
 import com.example.prueba2aplicacionesmoviles.ui.cargar.PantallaCargarDocumento
+import com.example.prueba2aplicacionesmoviles.ui.documentos.MisDocumentosViewModel
+import com.example.prueba2aplicacionesmoviles.ui.documentos.PantallaMisDocumentos
 
 private const val DURACION_TRANSICION = 350
 
@@ -101,7 +103,8 @@ fun AppNavegacion() {
             PantallaHome(
                 viewModel = vm,
                 onSesionInvalida = { navController.limpiarYNavegar(Rutas.BIENVENIDA) },
-                onCargarDocumento = { navController.navigate(Rutas.CARGAR_DOCUMENTO) }
+                onCargarDocumento = { navController.navigate(Rutas.CARGAR_DOCUMENTO) },
+                onVerDocumentos = { navController.navigate(Rutas.MIS_DOCUMENTOS) }
             )
         }
         composable(Rutas.CARGAR_DOCUMENTO) {
@@ -112,6 +115,15 @@ fun AppNavegacion() {
                 viewModel = vm,
                 onVolver = { navController.popBackStack() },
                 onGuardado = { navController.popBackStack() }
+            )
+        }
+        composable(Rutas.MIS_DOCUMENTOS) {
+            val vm: MisDocumentosViewModel = viewModel {
+                MisDocumentosViewModel(Dependencias.documentoRepositorio(context), sesion)
+            }
+            PantallaMisDocumentos(
+                viewModel = vm,
+                onVolver = { navController.popBackStack() }
             )
         }
     }

@@ -168,7 +168,7 @@ fun PantallaHome(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Hola, ${estado.primerNombre} 👋",
+                "Hola, ${estado.primerNombre} ",
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
