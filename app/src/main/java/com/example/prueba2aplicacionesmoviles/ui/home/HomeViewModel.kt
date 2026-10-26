@@ -43,4 +43,11 @@ class HomeViewModel(
             }
         }
     }
+
+    fun cerrarSesion() {
+        viewModelScope.launch {
+            sesion.cerrar()
+            _estado.update { it.copy(sesionInvalida = true) }
+        }
+    }
 }

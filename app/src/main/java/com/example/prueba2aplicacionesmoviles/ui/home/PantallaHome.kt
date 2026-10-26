@@ -21,12 +21,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -89,11 +91,25 @@ fun PantallaHome(
         OpcionMenu("Tomar foto", "Digitaliza un documento con la cámara",
             Icons.Filled.CameraAlt, accionOProximamente(onTomarFoto)),
         OpcionMenu("Mis documentos", "Revisa todo lo que has guardado",
-            Icons.Filled.Folder, accionOProximamente(onVerDocumentos))
+            Icons.Filled.Folder, accionOProximamente(onVerDocumentos)),
+        OpcionMenu("Cerrar sesión", "Sale de tu cuenta actual",
+            Icons.Filled.ExitToApp, viewModel::cerrarSesion)
     )
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Menú principal") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Menú principal") },
+                actions = {
+                    IconButton(onClick = viewModel::cerrarSesion) {
+                        Icon(
+                            imageVector = Icons.Filled.ExitToApp,
+                            contentDescription = "Cerrar sesión"
+                        )
+                    }
+                }
+            )
+        },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { innerPadding ->
         if (estado.cargando) {
