@@ -1,7 +1,7 @@
 package com.example.prueba2aplicacionesmoviles
 
-import com.example.prueba2aplicacionesmoviles.domain.validacion.FuerzaPassword
-import com.example.prueba2aplicacionesmoviles.domain.validacion.Validador
+import com.example.prueba2aplicacionesmoviles.dominio.validacion.FuerzaPassword
+import com.example.prueba2aplicacionesmoviles.dominio.validacion.Validador
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
