@@ -1,4 +1,4 @@
-package com.example.prueba2aplicacionesmoviles
+package com.example.prueba2aplicacionesmoviles.ui.bienvenida
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
