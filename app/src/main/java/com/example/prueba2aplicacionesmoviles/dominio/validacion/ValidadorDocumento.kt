@@ -1,5 +1,6 @@
 package com.example.prueba2aplicacionesmoviles.dominio.validacion
 
+// Reglas del formulario "Cargar documento". Igual que Validador, es Kotlin puro y se prueba sin emulador.
 object ValidadorDocumento {
 
     const val NOMBRE_MIN = 3
