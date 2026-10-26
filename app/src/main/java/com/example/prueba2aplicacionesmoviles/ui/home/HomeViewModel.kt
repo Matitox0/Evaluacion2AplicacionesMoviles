@@ -1,7 +1,9 @@
 package com.example.prueba2aplicacionesmoviles.ui.home
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.prueba2aplicacionesmoviles.data.repositorio.DocumentoRepository
 import com.example.prueba2aplicacionesmoviles.data.repositorio.UsuarioRepositorio
 import com.example.prueba2aplicacionesmoviles.data.sesion.SesionManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,7 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val repositorio: UsuarioRepositorio,
+    private val documentoRepositorio: DocumentoRepository,
     private val sesion: SesionManager
 ) : ViewModel() {
 
@@ -48,6 +51,15 @@ class HomeViewModel(
         viewModelScope.launch {
             sesion.cerrar()
             _estado.update { it.copy(sesionInvalida = true) }
+        }
+    }
+
+    fun guardarFoto(uri: Uri, onResultado: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val usuarioId = sesion.usuarioActual() ?: return@launch
+            val nombre = "Foto ${System.currentTimeMillis()}"
+            val exito = documentoRepositorio.guardar(usuarioId, nombre, uri)
+            onResultado(exito)
         }
     }
 }

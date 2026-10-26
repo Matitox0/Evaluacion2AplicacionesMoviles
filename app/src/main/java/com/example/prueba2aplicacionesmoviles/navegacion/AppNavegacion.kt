@@ -92,7 +92,11 @@ fun AppNavegacion() {
 
         composable(Rutas.HOME) {
             val vm: HomeViewModel = viewModel {
-                HomeViewModel(Dependencias.usuarioRepositorio(context), sesion)
+                HomeViewModel(
+                    Dependencias.usuarioRepositorio(context),
+                    Dependencias.documentoRepositorio(context),
+                    sesion
+                )
             }
             PantallaHome(
                 viewModel = vm,

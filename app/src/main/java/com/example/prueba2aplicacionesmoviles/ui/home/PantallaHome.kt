@@ -47,7 +47,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import android.net.Uri
+import java.io.File
 import kotlinx.coroutines.launch
 
 // Una opción del menú principal.
@@ -74,9 +80,40 @@ fun PantallaHome(
     val estado by viewModel.estado.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(estado.sesionInvalida) {
         if (estado.sesionInvalida) onSesionInvalida()
+    }
+
+    var fotoUriTemp by remember { mutableStateOf<Uri?>(null) }
+    val camaraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { exito ->
+        if (exito && fotoUriTemp != null) {
+            viewModel.guardarFoto(fotoUriTemp!!) { guardado ->
+                scope.launch {
+                    if (guardado) snackbar.showSnackbar("Foto guardada correctamente")
+                    else snackbar.showSnackbar("Error al guardar la foto")
+                }
+            }
+        }
+    }
+
+    val tomarFotoReal: () -> Unit = {
+        try {
+            val carpeta = File(context.cacheDir, "camara").apply { mkdirs() }
+            val archivoFoto = File(carpeta, "foto_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                archivoFoto
+            )
+            fotoUriTemp = uri
+            camaraLauncher.launch(uri)
+        } catch (e: Exception) {
+            scope.launch { snackbar.showSnackbar("No se pudo iniciar la cámara") }
+        }
     }
 
     // Mientras una opción no tenga su pantalla, avisa con un snackbar en vez de no hacer nada.
@@ -89,7 +126,7 @@ fun PantallaHome(
         OpcionMenu("Cargar documento", "Sube un PDF o imagen desde tu teléfono",
             Icons.Filled.UploadFile, accionOProximamente(onCargarDocumento)),
         OpcionMenu("Tomar foto", "Digitaliza un documento con la cámara",
-            Icons.Filled.CameraAlt, accionOProximamente(onTomarFoto)),
+            Icons.Filled.CameraAlt, onTomarFoto ?: tomarFotoReal),
         OpcionMenu("Mis documentos", "Revisa todo lo que has guardado",
             Icons.Filled.Folder, accionOProximamente(onVerDocumentos)),
         OpcionMenu("Cerrar sesión", "Sale de tu cuenta actual",
