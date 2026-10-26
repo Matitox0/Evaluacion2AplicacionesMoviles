@@ -3,6 +3,7 @@ package com.example.prueba2aplicacionesmoviles.data.repositorio
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.core.content.FileProvider
 import com.example.prueba2aplicacionesmoviles.data.Documento
 import com.example.prueba2aplicacionesmoviles.data.DocumentoDao
 import kotlinx.coroutines.Dispatchers
@@ -11,12 +12,15 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
-class DocumentoRepository(
+// Única puerta de entrada a los documentos: maneja tanto la tabla de Room como los archivos en disco.
+class DocumentoRepositorio(
     private val context: Context,
     private val documentoDao: DocumentoDao
 ) {
 
-    // La usaremos en el paso de "ver documentos".
+    private val autoridad = "${context.packageName}.fileprovider"
+    private val carpetaCamara get() = File(context.cacheDir, CARPETA_CAMARA)
+
     fun listar(usuarioId: Int): Flow<List<Documento>> =
         documentoDao.listarPorUsuario(usuarioId)
 
@@ -73,10 +77,35 @@ class DocumentoRepository(
         }
 
     suspend fun eliminar(documento: Documento) = withContext(Dispatchers.IO) {
-        try {
-            val fileUri = Uri.parse(documento.uri)
-            fileUri.path?.let { File(it).delete() }
-        } catch (_: Exception) {}
+        archivoDe(documento)?.delete()
         documentoDao.eliminar(documento)
+    }
+
+    /**
+     * Uri "content://" para que otra app (visor PDF, galería) pueda abrir el documento.
+     * Nunca se expone la ruta real del archivo: FileProvider da acceso temporal solo a ese archivo.
+     * Devuelve null si el archivo ya no existe en disco.
+     */
+    fun uriParaAbrir(documento: Documento): Uri? {
+        val archivo = archivoDe(documento)?.takeIf { it.exists() } ?: return null
+        return FileProvider.getUriForFile(context, autoridad, archivo)
+    }
+
+    // Archivo temporal donde la app de cámara escribe la foto antes de que el usuario la guarde.
+    fun crearUriFoto(): Uri {
+        val archivo = File(carpetaCamara.apply { mkdirs() }, "foto_${System.currentTimeMillis()}.jpg")
+        return FileProvider.getUriForFile(context, autoridad, archivo)
+    }
+
+    // Las fotos ya guardadas fueron copiadas a la carpeta privada; las temporales se pueden borrar.
+    fun limpiarFotosTemporales() {
+        carpetaCamara.listFiles()?.forEach { it.delete() }
+    }
+
+    private fun archivoDe(documento: Documento): File? =
+        Uri.parse(documento.uri).path?.let(::File)
+
+    private companion object {
+        const val CARPETA_CAMARA = "camara"
     }
 }

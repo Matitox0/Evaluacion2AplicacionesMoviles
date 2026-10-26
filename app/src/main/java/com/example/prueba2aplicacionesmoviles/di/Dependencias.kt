@@ -2,9 +2,9 @@ package com.example.prueba2aplicacionesmoviles.di
 
 import android.content.Context
 import com.example.prueba2aplicacionesmoviles.data.AppDatabase
+import com.example.prueba2aplicacionesmoviles.data.repositorio.DocumentoRepositorio
 import com.example.prueba2aplicacionesmoviles.data.repositorio.UsuarioRepositorio
 import com.example.prueba2aplicacionesmoviles.data.sesion.SesionManager
-import com.example.prueba2aplicacionesmoviles.data.repositorio.DocumentoRepository
 
 // Arma las dependencias en un solo lugar para que los ViewModels las reciban listas.
 object Dependencias {
@@ -15,5 +15,5 @@ object Dependencias {
     fun sesion(context: Context) = SesionManager(context)
 
     fun documentoRepositorio(context: Context) =
-        DocumentoRepository(context, AppDatabase.obtener(context).documentoDao())
+        DocumentoRepositorio(context, AppDatabase.obtener(context).documentoDao())
 }

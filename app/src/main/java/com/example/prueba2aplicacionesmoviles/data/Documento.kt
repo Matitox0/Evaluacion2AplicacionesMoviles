@@ -23,7 +23,7 @@ data class Documento(
     val id: Int = 0,
     val usuarioId: Int,
     val nombre: String,
-    val uri: String,        // ubicación del archivo (la forma de guardarlo la vemos en el paso 7)
+    val uri: String,        // file:// de la copia en la carpeta privada de la app
     val tipoMime: String,
     val fechaCarga: Long    // System.currentTimeMillis()
 )
