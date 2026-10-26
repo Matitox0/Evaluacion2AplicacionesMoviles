@@ -1,9 +1,10 @@
 package com.example.prueba2aplicacionesmoviles.ui.documentos
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.prueba2aplicacionesmoviles.data.Documento
-import com.example.prueba2aplicacionesmoviles.data.repositorio.DocumentoRepository
+import com.example.prueba2aplicacionesmoviles.data.repositorio.DocumentoRepositorio
 import com.example.prueba2aplicacionesmoviles.data.sesion.SesionManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,18 +13,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MisDocumentosViewModel(
-    private val repositorio: DocumentoRepository,
+    private val repositorio: DocumentoRepositorio,
     sesion: SesionManager
 ) : ViewModel() {
 
-    private val usuarioId = sesion.usuarioActual() ?: -1
+    // null mientras Room no entrega la primera lista: así la UI distingue "cargando" de "vacío".
+    val documentos: StateFlow<List<Documento>?> =
+        (sesion.usuarioActual()?.let(repositorio::listar) ?: flowOf(emptyList()))
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val documentos: StateFlow<List<Documento>> = if (usuarioId != -1) {
-        repositorio.listar(usuarioId)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    } else {
-        flowOf<List<Documento>>(emptyList()).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    }
+    fun uriParaAbrir(documento: Documento): Uri? = repositorio.uriParaAbrir(documento)
 
     fun eliminar(documento: Documento) {
         viewModelScope.launch {
