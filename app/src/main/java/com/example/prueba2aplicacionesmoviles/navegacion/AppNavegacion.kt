@@ -1,36 +1,55 @@
-package com.example.prueba2aplicacionesmoviles
+package com.example.prueba2aplicacionesmoviles.navegacion
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavType
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.prueba2aplicacionesmoviles.data.AppDatabase
-import com.example.prueba2aplicacionesmoviles.data.Usuario
-import com.example.prueba2aplicacionesmoviles.navegacion.Rutas
-import kotlinx.coroutines.launch
+import com.example.prueba2aplicacionesmoviles.di.Dependencias
+import com.example.prueba2aplicacionesmoviles.ui.bienvenida.PantallaBienvenida
+import com.example.prueba2aplicacionesmoviles.ui.home.HomeViewModel
+import com.example.prueba2aplicacionesmoviles.ui.home.PantallaHome
+import com.example.prueba2aplicacionesmoviles.ui.login.LoginViewModel
+import com.example.prueba2aplicacionesmoviles.ui.login.PantallaLogin
+import com.example.prueba2aplicacionesmoviles.ui.registro.PantallaRegistro
+import com.example.prueba2aplicacionesmoviles.ui.registro.RegistroViewModel
+import com.example.prueba2aplicacionesmoviles.ui.cargar.CargarDocumentoViewModel
+import com.example.prueba2aplicacionesmoviles.ui.cargar.PantallaCargarDocumento
+
+private const val DURACION_TRANSICION = 350
 
 @Composable
 fun AppNavegacion() {
     val navController = rememberNavController()
+    val context = LocalContext.current.applicationContext
+    val sesion = remember { Dependencias.sesion(context) }
+
+    // Si ya hay sesión guardada, la app abre directo en el menú.
+    val inicio = remember { if (sesion.haySesionActiva()) Rutas.HOME else Rutas.BIENVENIDA }
 
     NavHost(
         navController = navController,
-        startDestination = Rutas.BIENVENIDA
+        startDestination = inicio,
+        // Transiciones animadas entre pantallas: avanzar desliza a la izquierda, volver a la derecha.
+        enterTransition = {
+            slideIntoContainer(SlideDirection.Start, tween(DURACION_TRANSICION)) + fadeIn(tween(DURACION_TRANSICION))
+        },
+        exitTransition = {
+            slideOutOfContainer(SlideDirection.Start, tween(DURACION_TRANSICION)) + fadeOut(tween(DURACION_TRANSICION))
+        },
+        popEnterTransition = {
+            slideIntoContainer(SlideDirection.End, tween(DURACION_TRANSICION)) + fadeIn(tween(DURACION_TRANSICION))
+        },
+        popExitTransition = {
+            slideOutOfContainer(SlideDirection.End, tween(DURACION_TRANSICION)) + fadeOut(tween(DURACION_TRANSICION))
+        }
     ) {
         composable(Rutas.BIENVENIDA) {
             PantallaBienvenida(
@@ -39,23 +58,54 @@ fun AppNavegacion() {
             )
         }
 
-        // Temporal: se reemplaza cuando llegue el login real de tu compañero.
         composable(Rutas.LOGIN) {
-            MarcadorLogin(
-                onIrADocumentos = { navController.navigate(Rutas.cargarDocumento(1)) }
+            val vm: LoginViewModel = viewModel {
+                LoginViewModel(Dependencias.usuarioRepositorio(context), sesion)
+            }
+            PantallaLogin(
+                viewModel = vm,
+                onVolver = { navController.popBackStack() },
+                onIrARegistro = {
+                    navController.navigate(Rutas.REGISTRO) {
+                        popUpTo(Rutas.LOGIN) { inclusive = true }
+                    }
+                },
+                onLoginExitoso = { navController.irAlMenu() }
             )
         }
 
-        // Temporal: se reemplaza con el registro real.
-        composable(Rutas.REGISTRO) { Marcador("Pantalla de registro") }
+        composable(Rutas.REGISTRO) {
+            val vm: RegistroViewModel = viewModel {
+                RegistroViewModel(Dependencias.usuarioRepositorio(context), sesion)
+            }
+            PantallaRegistro(
+                viewModel = vm,
+                onVolver = { navController.popBackStack() },
+                onIrALogin = {
+                    navController.navigate(Rutas.LOGIN) {
+                        popUpTo(Rutas.REGISTRO) { inclusive = true }
+                    }
+                },
+                onRegistroExitoso = { navController.irAlMenu() }
+            )
+        }
 
-        composable(
-            route = Rutas.CARGAR_DOCUMENTO,
-            arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
-        ) { entrada ->
-            val usuarioId = entrada.arguments?.getInt("usuarioId") ?: return@composable
+        composable(Rutas.HOME) {
+            val vm: HomeViewModel = viewModel {
+                HomeViewModel(Dependencias.usuarioRepositorio(context), sesion)
+            }
+            PantallaHome(
+                viewModel = vm,
+                onSesionInvalida = { navController.limpiarYNavegar(Rutas.BIENVENIDA) },
+                onCargarDocumento = { navController.navigate(Rutas.CARGAR_DOCUMENTO) }
+            )
+        }
+        composable(Rutas.CARGAR_DOCUMENTO) {
+            val vm: CargarDocumentoViewModel = viewModel {
+                CargarDocumentoViewModel(Dependencias.documentoRepositorio(context), sesion)
+            }
             PantallaCargarDocumento(
-                usuarioId = usuarioId,
+                viewModel = vm,
                 onVolver = { navController.popBackStack() },
                 onGuardado = { navController.popBackStack() }
             )
@@ -63,43 +113,12 @@ fun AppNavegacion() {
     }
 }
 
-@Composable
-private fun Marcador(texto: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(texto)
-    }
-}
+// Entra al menú borrando el historial: el botón "atrás" no vuelve al login.
+private fun NavHostController.irAlMenu() = limpiarYNavegar(Rutas.HOME)
 
-// Temporal: crea un usuario de prueba y salta a cargar documentos.
-@Composable
-private fun MarcadorLogin(onIrADocumentos: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Pantalla de inicio de sesión")
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = {
-            scope.launch {
-                val dao = AppDatabase.obtener(context).usuarioDao()
-                if (dao.buscarPorId(1) == null) {
-                    dao.insertar(
-                        Usuario(
-                            nombre = "Prueba",
-                            correo = "prueba@test.cl",
-                            passwordHash = "x",
-                            salt = "x"
-                        )
-                    )
-                }
-                onIrADocumentos()
-            }
-        }) {
-            Text("Ir a documentos (solo prueba)")
-        }
+private fun NavHostController.limpiarYNavegar(ruta: String) {
+    navigate(ruta) {
+        popUpTo(graph.id) { inclusive = true }
+        launchSingleTop = true
     }
 }
