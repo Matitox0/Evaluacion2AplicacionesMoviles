@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.prueba2aplicacionesmoviles.data.repositorio.ResultadoAuth
 import com.example.prueba2aplicacionesmoviles.data.repositorio.UsuarioRepositorio
 import com.example.prueba2aplicacionesmoviles.data.sesion.SesionManager
-import com.example.prueba2aplicacionesmoviles.domain.validacion.Validador
+import com.example.prueba2aplicacionesmoviles.dominio.validacion.Validador
 import com.example.prueba2aplicacionesmoviles.ui.componentes.CampoEstado
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

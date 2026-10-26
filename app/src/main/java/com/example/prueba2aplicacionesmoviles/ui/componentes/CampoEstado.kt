@@ -1,6 +1,6 @@
 package com.example.prueba2aplicacionesmoviles.ui.componentes
 
-import com.example.prueba2aplicacionesmoviles.domain.validacion.ResultadoValidacion
+import com.example.prueba2aplicacionesmoviles.dominio.validacion.ResultadoValidacion
 
 /**
  * Estado de un campo de formulario.

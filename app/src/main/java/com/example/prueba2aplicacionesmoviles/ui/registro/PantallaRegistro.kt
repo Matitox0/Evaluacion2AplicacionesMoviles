@@ -46,7 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.prueba2aplicacionesmoviles.domain.validacion.FuerzaPassword
+import com.example.prueba2aplicacionesmoviles.dominio.validacion.FuerzaPassword
 import com.example.prueba2aplicacionesmoviles.ui.componentes.BannerError
 import com.example.prueba2aplicacionesmoviles.ui.componentes.BotonCarga
 import com.example.prueba2aplicacionesmoviles.ui.componentes.CampoFormulario
