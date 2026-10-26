@@ -9,21 +9,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.prueba2aplicacionesmoviles.di.Dependencias
 import com.example.prueba2aplicacionesmoviles.ui.bienvenida.PantallaBienvenida
+import com.example.prueba2aplicacionesmoviles.ui.cargar.CargarDocumentoViewModel
+import com.example.prueba2aplicacionesmoviles.ui.cargar.PantallaCargarDocumento
+import com.example.prueba2aplicacionesmoviles.ui.documentos.MisDocumentosViewModel
+import com.example.prueba2aplicacionesmoviles.ui.documentos.PantallaMisDocumentos
 import com.example.prueba2aplicacionesmoviles.ui.home.HomeViewModel
 import com.example.prueba2aplicacionesmoviles.ui.home.PantallaHome
 import com.example.prueba2aplicacionesmoviles.ui.login.LoginViewModel
 import com.example.prueba2aplicacionesmoviles.ui.login.PantallaLogin
 import com.example.prueba2aplicacionesmoviles.ui.registro.PantallaRegistro
 import com.example.prueba2aplicacionesmoviles.ui.registro.RegistroViewModel
-import com.example.prueba2aplicacionesmoviles.ui.cargar.CargarDocumentoViewModel
-import com.example.prueba2aplicacionesmoviles.ui.cargar.PantallaCargarDocumento
-import com.example.prueba2aplicacionesmoviles.ui.documentos.MisDocumentosViewModel
-import com.example.prueba2aplicacionesmoviles.ui.documentos.PantallaMisDocumentos
 
 private const val DURACION_TRANSICION = 350
 
@@ -94,36 +96,43 @@ fun AppNavegacion() {
 
         composable(Rutas.HOME) {
             val vm: HomeViewModel = viewModel {
-                HomeViewModel(
-                    Dependencias.usuarioRepositorio(context),
-                    Dependencias.documentoRepositorio(context),
-                    sesion
-                )
+                HomeViewModel(Dependencias.usuarioRepositorio(context), sesion)
             }
             PantallaHome(
                 viewModel = vm,
                 onSesionInvalida = { navController.limpiarYNavegar(Rutas.BIENVENIDA) },
-                onCargarDocumento = { navController.navigate(Rutas.CARGAR_DOCUMENTO) },
+                onCargarDocumento = { navController.navigate(Rutas.cargarDocumento()) },
+                onTomarFoto = { navController.navigate(Rutas.cargarDocumento(abrirCamara = true)) },
                 onVerDocumentos = { navController.navigate(Rutas.MIS_DOCUMENTOS) }
             )
         }
-        composable(Rutas.CARGAR_DOCUMENTO) {
+
+        composable(
+            route = Rutas.CARGAR_DOCUMENTO,
+            arguments = listOf(navArgument(Rutas.ARG_CAMARA) {
+                type = NavType.BoolType
+                defaultValue = false
+            })
+        ) { entrada ->
             val vm: CargarDocumentoViewModel = viewModel {
                 CargarDocumentoViewModel(Dependencias.documentoRepositorio(context), sesion)
             }
             PantallaCargarDocumento(
                 viewModel = vm,
+                abrirCamara = entrada.arguments?.getBoolean(Rutas.ARG_CAMARA) ?: false,
                 onVolver = { navController.popBackStack() },
                 onGuardado = { navController.popBackStack() }
             )
         }
+
         composable(Rutas.MIS_DOCUMENTOS) {
             val vm: MisDocumentosViewModel = viewModel {
                 MisDocumentosViewModel(Dependencias.documentoRepositorio(context), sesion)
             }
             PantallaMisDocumentos(
                 viewModel = vm,
-                onVolver = { navController.popBackStack() }
+                onVolver = { navController.popBackStack() },
+                onCargarDocumento = { navController.navigate(Rutas.cargarDocumento()) }
             )
         }
     }

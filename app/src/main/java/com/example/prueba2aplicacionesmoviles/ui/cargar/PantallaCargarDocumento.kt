@@ -1,11 +1,15 @@
 package com.example.prueba2aplicacionesmoviles.ui.cargar
 
+import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +24,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
@@ -37,15 +43,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.prueba2aplicacionesmoviles.dominio.validacion.ValidadorDocumento
 import com.example.prueba2aplicacionesmoviles.ui.componentes.BannerError
 import com.example.prueba2aplicacionesmoviles.ui.componentes.BotonCarga
 import com.example.prueba2aplicacionesmoviles.ui.componentes.CampoFormulario
+import com.example.prueba2aplicacionesmoviles.ui.theme.VerdeExito
 
 // Tipos de archivo que dejamos elegir.
 private val TIPOS_PERMITIDOS = arrayOf(
@@ -56,20 +67,55 @@ private val TIPOS_PERMITIDOS = arrayOf(
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 )
 
+/**
+ * Formulario para guardar un documento. El archivo puede venir de dos recursos nativos:
+ * el selector de archivos del sistema o la cámara. Ambos terminan en el mismo formulario validado.
+ * Si [abrirCamara] es true (se llegó desde "Tomar foto" del menú), la cámara se abre al entrar.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaCargarDocumento(
     viewModel: CargarDocumentoViewModel,
+    abrirCamara: Boolean,
     onVolver: () -> Unit,
     onGuardado: () -> Unit
 ) {
     val estado by viewModel.estado.collectAsState()
     val context = LocalContext.current
 
-    // Recurso nativo: selector de archivos del sistema.
+    // Recurso nativo 1: selector de archivos del sistema (no requiere permisos de almacenamiento).
     val selectorArchivos = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> viewModel.onArchivoSeleccionado(uri) }
+
+    // Recurso nativo 2: cámara. La foto se escribe en un archivo temporal compartido vía FileProvider,
+    // así la app no necesita pedir el permiso CAMERA.
+    val camara = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { exito -> viewModel.onFotoTomada(exito) }
+
+    val tomarFoto: () -> Unit = {
+        if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            viewModel.onCamaraNoDisponible()
+        } else {
+            viewModel.prepararFoto()?.let { uri ->
+                try {
+                    camara.launch(uri)
+                } catch (e: ActivityNotFoundException) {
+                    viewModel.onCamaraNoDisponible()
+                }
+            }
+        }
+    }
+
+    // Se guarda en rememberSaveable para no reabrir la cámara al rotar o volver a la pantalla.
+    var camaraAutoAbierta by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (abrirCamara && !camaraAutoAbierta) {
+            camaraAutoAbierta = true
+            tomarFoto()
+        }
+    }
 
     LaunchedEffect(estado.guardado) {
         if (estado.guardado) {
@@ -98,13 +144,29 @@ fun PantallaCargarDocumento(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            OutlinedButton(
-                onClick = { selectorArchivos.launch(TIPOS_PERMITIDOS) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Filled.UploadFile, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Seleccionar archivo")
+            Text(
+                "1. Elige el archivo",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = { selectorArchivos.launch(TIPOS_PERMITIDOS) },
+                    enabled = !estado.cargando,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.UploadFile, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Archivo")
+                }
+                OutlinedButton(
+                    onClick = tomarFoto,
+                    enabled = !estado.cargando,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.CameraAlt, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Cámara")
+                }
             }
 
             // Tarjeta con el archivo elegido; aparece con animación.
@@ -118,7 +180,8 @@ fun PantallaCargarDocumento(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            Icons.Filled.Description,
+                            if (estado.origen == OrigenArchivo.CAMARA) Icons.Filled.CameraAlt
+                            else Icons.Filled.Description,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -126,13 +189,23 @@ fun PantallaCargarDocumento(
                         Text(
                             text = estado.nombreArchivo,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = "Archivo listo",
+                            tint = VerdeExito
                         )
                     }
                 }
             }
 
-            estado.errorArchivo?.let { mensaje ->
+            AnimatedVisibility(
+                visible = estado.errorArchivo != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Filled.Error,
@@ -142,13 +215,18 @@ fun PantallaCargarDocumento(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = mensaje,
+                        text = estado.errorArchivo.orEmpty(),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
 
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "2. Ponle un nombre",
+                style = MaterialTheme.typography.titleMedium
+            )
             CampoFormulario(
                 estado = estado.nombre,
                 onValorCambio = viewModel::onNombreCambio,
@@ -156,7 +234,9 @@ fun PantallaCargarDocumento(
                 iconoInicio = Icons.Filled.Edit,
                 onFocoPerdido = viewModel::onNombreFocoPerdido,
                 imeAction = ImeAction.Done,
-                onAccionFinal = viewModel::guardar
+                onAccionFinal = viewModel::guardar,
+                textoAyuda = "Entre ${ValidadorDocumento.NOMBRE_MIN} y ${ValidadorDocumento.NOMBRE_MAX} caracteres",
+                habilitado = !estado.cargando
             )
 
             BannerError(estado.errorGeneral)

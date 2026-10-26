@@ -6,7 +6,11 @@ object Rutas {
     const val LOGIN = "login"
     const val REGISTRO = "registro"
     const val HOME = "menu"
-
-    const val CARGAR_DOCUMENTO = "cargar_documento"
     const val MIS_DOCUMENTOS = "mis_documentos"
+
+    // "Cargar documento" recibe un argumento opcional para abrir la cámara apenas se entra.
+    const val ARG_CAMARA = "camara"
+    const val CARGAR_DOCUMENTO = "cargar_documento?$ARG_CAMARA={$ARG_CAMARA}"
+
+    fun cargarDocumento(abrirCamara: Boolean = false) = "cargar_documento?$ARG_CAMARA=$abrirCamara"
 }

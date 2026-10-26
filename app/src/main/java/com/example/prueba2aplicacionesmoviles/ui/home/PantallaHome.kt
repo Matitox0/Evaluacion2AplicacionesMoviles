@@ -19,11 +19,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,10 +32,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,19 +42,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.FileProvider
-import android.net.Uri
-import java.io.File
-import kotlinx.coroutines.launch
 
 // Una opción del menú principal.
 private data class OpcionMenu(
@@ -64,90 +57,66 @@ private data class OpcionMenu(
     val accion: () -> Unit
 )
 
-/**
- * Menú principal. Las acciones llegan como parámetros desde la navegación,
- * así las siguientes tareas (cargar, cámara, ver documentos) solo conectan su ruta aquí.
- */
+// Menú principal. Las acciones de navegación llegan como parámetros desde AppNavegacion.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaHome(
     viewModel: HomeViewModel,
     onSesionInvalida: () -> Unit,
-    onCargarDocumento: (() -> Unit)? = null,
-    onTomarFoto: (() -> Unit)? = null,
-    onVerDocumentos: (() -> Unit)? = null
+    onCargarDocumento: () -> Unit,
+    onTomarFoto: () -> Unit,
+    onVerDocumentos: () -> Unit
 ) {
     val estado by viewModel.estado.collectAsState()
-    val snackbar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    var confirmarSalida by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(estado.sesionInvalida) {
         if (estado.sesionInvalida) onSesionInvalida()
     }
 
-    var fotoUriTemp by remember { mutableStateOf<Uri?>(null) }
-    val camaraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
-    ) { exito ->
-        if (exito && fotoUriTemp != null) {
-            viewModel.guardarFoto(fotoUriTemp!!) { guardado ->
-                scope.launch {
-                    if (guardado) snackbar.showSnackbar("Foto guardada correctamente")
-                    else snackbar.showSnackbar("Error al guardar la foto")
-                }
-            }
-        }
-    }
-
-    val tomarFotoReal: () -> Unit = {
-        try {
-            val carpeta = File(context.cacheDir, "camara").apply { mkdirs() }
-            val archivoFoto = File(carpeta, "foto_${System.currentTimeMillis()}.jpg")
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                archivoFoto
-            )
-            fotoUriTemp = uri
-            camaraLauncher.launch(uri)
-        } catch (e: Exception) {
-            scope.launch { snackbar.showSnackbar("No se pudo iniciar la cámara") }
-        }
-    }
-
-    // Mientras una opción no tenga su pantalla, avisa con un snackbar en vez de no hacer nada.
-    val proximamente: () -> Unit = {
-        scope.launch { snackbar.showSnackbar("Esta opción estará disponible pronto") }
-    }
-    fun accionOProximamente(accion: (() -> Unit)?): () -> Unit = accion ?: proximamente
-
     val opciones = listOf(
         OpcionMenu("Cargar documento", "Sube un PDF o imagen desde tu teléfono",
-            Icons.Filled.UploadFile, accionOProximamente(onCargarDocumento)),
+            Icons.Filled.UploadFile, onCargarDocumento),
         OpcionMenu("Tomar foto", "Digitaliza un documento con la cámara",
-            Icons.Filled.CameraAlt, onTomarFoto ?: tomarFotoReal),
-        OpcionMenu("Mis documentos", "Revisa todo lo que has guardado",
-            Icons.Filled.Folder, accionOProximamente(onVerDocumentos)),
+            Icons.Filled.CameraAlt, onTomarFoto),
+        OpcionMenu("Mis documentos", "Revisa, abre o elimina lo que has guardado",
+            Icons.Filled.Folder, onVerDocumentos),
         OpcionMenu("Cerrar sesión", "Sale de tu cuenta actual",
-            Icons.Filled.ExitToApp, viewModel::cerrarSesion)
+            Icons.AutoMirrored.Filled.ExitToApp) { confirmarSalida = true }
     )
+
+    if (confirmarSalida) {
+        AlertDialog(
+            onDismissRequest = { confirmarSalida = false },
+            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Seguro que quieres salir de tu cuenta?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmarSalida = false
+                    viewModel.cerrarSesion()
+                }) { Text("Salir") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmarSalida = false }) { Text("Cancelar") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Menú principal") },
                 actions = {
-                    IconButton(onClick = viewModel::cerrarSesion) {
+                    IconButton(onClick = { confirmarSalida = true }) {
                         Icon(
-                            imageVector = Icons.Filled.ExitToApp,
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = "Cerrar sesión"
                         )
                     }
                 }
             )
-        },
-        snackbarHost = { SnackbarHost(snackbar) }
+        }
     ) { innerPadding ->
         if (estado.cargando) {
             Box(
@@ -168,7 +137,7 @@ fun PantallaHome(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Hola, ${estado.primerNombre} ",
+                "Hola, ${estado.primerNombre}",
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
