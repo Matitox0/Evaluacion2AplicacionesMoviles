@@ -60,5 +60,5 @@ app/src/main/java/com/example/prueba2aplicacionesmoviles/
 ```
 
 ## Planificación
-- Repositorio GitHub: _agregar enlace_
-- Tablero Trello: _agregar enlace_
+- Repositorio GitHub: https://github.com/Matitox0/Evaluacion2AplicacionesMoviles
+- Tablero Trello: https://trello.com/invite/b/6ac53337bf0e84d3202fab21/ATTIe631e6e72ee965dd63c8bd535da2d4d848CF8E39/matias-meza-alonso-munoz
