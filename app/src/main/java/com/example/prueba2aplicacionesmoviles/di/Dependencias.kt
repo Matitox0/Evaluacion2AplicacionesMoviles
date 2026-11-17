@@ -3,6 +3,7 @@ package com.example.prueba2aplicacionesmoviles.di
 import android.content.Context
 import com.example.prueba2aplicacionesmoviles.data.AppDatabase
 import com.example.prueba2aplicacionesmoviles.data.repositorio.DocumentoRepositorio
+import com.example.prueba2aplicacionesmoviles.data.repositorio.IndicadorRepositorio
 import com.example.prueba2aplicacionesmoviles.data.repositorio.UsuarioRepositorio
 import com.example.prueba2aplicacionesmoviles.data.sesion.SesionManager
 
@@ -16,4 +17,6 @@ object Dependencias {
 
     fun documentoRepositorio(context: Context) =
         DocumentoRepositorio(context, AppDatabase.obtener(context).documentoDao())
+
+    fun indicadorRepositorio() = IndicadorRepositorio()
 }

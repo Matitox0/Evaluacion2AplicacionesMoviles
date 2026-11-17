@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- La cámara es opcional: la app se instala igual en dispositivos sin cámara
          y la pantalla de carga avisa si no hay una disponible. No se pide el permiso CAMERA
          porque la foto la toma la app de cámara del sistema (ACTION_IMAGE_CAPTURE). -->
