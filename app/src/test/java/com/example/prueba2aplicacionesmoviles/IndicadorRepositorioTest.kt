@@ -7,6 +7,7 @@ import com.example.prueba2aplicacionesmoviles.data.repositorio.EstadoIndicadores
 import com.example.prueba2aplicacionesmoviles.data.repositorio.IndicadorRepositorio
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,20 +38,22 @@ class IndicadorRepositorioTest {
 
         assertTrue(resultado is EstadoIndicadores.Exito)
         val exito = resultado as EstadoIndicadores.Exito
+        assertFalse(exito.esFallback)
         assertEquals(2, exito.lista.size)
         assertEquals("UF", exito.lista[0].codigo)
         assertEquals("USD", exito.lista[1].codigo)
     }
 
     @Test
-    fun obtenerIndicadores_errorConexion() = runBlocking {
+    fun obtenerIndicadores_errorConexion_usaFallback() = runBlocking {
         val apiService = MockMindicadorApiService(lanzarExcepcion = true)
         val repositorio = IndicadorRepositorio(apiService)
 
         val resultado = repositorio.obtenerIndicadores()
 
-        assertTrue(resultado is EstadoIndicadores.Error)
-        val error = resultado as EstadoIndicadores.Error
-        assertTrue(error.mensaje.contains("Error de conexión"))
+        assertTrue(resultado is EstadoIndicadores.Exito)
+        val exito = resultado as EstadoIndicadores.Exito
+        assertTrue(exito.esFallback)
+        assertTrue(exito.lista.isNotEmpty())
     }
 }
